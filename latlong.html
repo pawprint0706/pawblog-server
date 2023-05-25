@@ -446,10 +446,9 @@
       // 검색 이벤트 함수
       function searchAddress() {
         let query = document.querySelector('input#searchbox-input').value;
-        let result = document.querySelector('div.result');
-        let tbody = document.querySelector('table.result tbody');
         // 입력 내용이 없을 경우
         if (query === '') {
+          query = null; // 메모리 정리
           return;
         }
         naverSearchLocal(query)
@@ -458,7 +457,7 @@
             // 에러인 경우 예외처리
             throw new Error(res.data.errorMessage);
           }
-          tbody.innerHTML = '';
+          document.querySelector('table.result tbody').innerHTML = '';
           if (res.data.items.length === 0) {
             // 검색 결과가 없을 경우
             // 지오코드를 이용하여 다시 검색
@@ -494,7 +493,7 @@
                   // 메모리 정리
                   coord = null;
                 });
-                tbody.appendChild(tr);
+                document.querySelector('table.result tbody').appendChild(tr);
                 // 메모리 정리
                 tr = null;
               });
@@ -540,12 +539,12 @@
                 tm128 = null;
                 coord = null;
               });
-              tbody.appendChild(tr);
+              document.querySelector('table.result tbody').appendChild(tr);
               // 메모리 정리
               tr = null;
             });
           }
-          result.style.display = 'grid';
+          document.querySelector('div.result').style.display = 'grid';
         })
         .catch((err) => {
           document.querySelector('table.result tbody').innerHTML = /* html */`
@@ -558,8 +557,6 @@
         .finally(() => {
           // 메모리 정리
           query = null;
-          result = null;
-          tbody = null;
         });
       }
       // 검색창 엔터키 입력 이벤트
