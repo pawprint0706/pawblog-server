@@ -446,6 +446,8 @@
       // 검색 이벤트 함수
       function searchAddress() {
         let query = document.querySelector('input#searchbox-input').value;
+        let result = document.querySelector('div.result');
+        let tbody = document.querySelector('table.result tbody');
         // 입력 내용이 없을 경우
         if (query === '') {
           return;
@@ -456,8 +458,6 @@
             // 에러인 경우 예외처리
             throw new Error(res.data.errorMessage);
           }
-          let result = document.querySelector('div.result');
-          let tbody = document.querySelector('table.result tbody');
           tbody.innerHTML = '';
           if (res.data.items.length === 0) {
             // 검색 결과가 없을 경우
@@ -500,7 +500,7 @@
               });
             })
             .catch((err) => {
-              tbody.innerHTML = /* html */`
+              document.querySelector('table.result tbody').innerHTML = /* html */`
                 <tr>
                   <td colspan="2">${err.error}</td>
                 </tr>
@@ -546,9 +546,6 @@
             });
           }
           result.style.display = 'grid';
-          // 메모리 정리
-          result = null;
-          tbody = null;
         })
         .catch((err) => {
           document.querySelector('table.result tbody').innerHTML = /* html */`
@@ -557,9 +554,13 @@
             </tr>
           `;
           document.querySelector('div.result').style.display = 'grid';
+        })
+        .finally(() => {
+          // 메모리 정리
+          query = null;
+          result = null;
+          tbody = null;
         });
-        // 메모리 정리
-        query = null;
       }
       // 검색창 엔터키 입력 이벤트
       document.querySelector('input#searchbox-input').addEventListener('keydown', (e) => {
