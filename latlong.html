@@ -240,7 +240,7 @@
       function naverSearchLocal(query) {
         const params = new URLSearchParams();
         params.append('query', query);
-        return axios.get('/api-naver-search-local.php', {
+        return axios.get('/api/naver-search-local.php', {
           headers: {
             'Accept':'*/*',
             'Content-Type':'application/json',
@@ -256,9 +256,9 @@
             query: _address
           }, (status, response) => {
             if (status === naver.maps.Service.Status.ERROR) {
-              reject({ error: "API 서비스 상태 에러" });
+              reject({ error:'API 서비스 상태 에러' });
             } else if (response.v2.meta.totalCount === 0) {
-              reject({ error: "검색 결과가 없습니다" });
+              reject({ error:'검색 결과가 없습니다' });
             } else {
               resolve(response.v2.addresses);
             }
@@ -282,46 +282,44 @@
         if (!item) {
           return;
         }
-        let name = item.name;
-        let region = item.region;
-        let land = item.land;
-        let isRoadAddress = name === 'roadaddr';
         let sido = '', sigugun = '', dongmyun = '', ri = '', rest = '';
-        if (hasArea(region.area1)) {
-          sido = region.area1.name;
+        if (hasArea(item.region.area1)) {
+          sido = item.region.area1.name;
         }
-        if (hasArea(region.area2)) {
-          sigugun = region.area2.name;
+        if (hasArea(item.region.area2)) {
+          sigugun = item.region.area2.name;
         }
-        if (hasArea(region.area3)) {
-          dongmyun = region.area3.name;
+        if (hasArea(item.region.area3)) {
+          dongmyun = item.region.area3.name;
         }
-        if (hasArea(region.area4)) {
-            ri = region.area4.name;
+        if (hasArea(item.region.area4)) {
+            ri = item.region.area4.name;
         }
-        if (land) {
-          if (hasData(land.number1)) {
-            if (hasData(land.type) && land.type === '2') {
+        if (item.land) {
+          if (hasData(item.land.number1)) {
+            if (hasData(item.land.type) && item.land.type === '2') {
               rest += '산';
             }
-            rest += land.number1;
-            if (hasData(land.number2)) {
-              rest += ('-' + land.number2);
+            rest += item.land.number1;
+            if (hasData(item.land.number2)) {
+              rest += ('-' + item.land.number2);
             }
           }
-          if (isRoadAddress === true) {
+          if (item.name === 'roadaddr') {
             if (checkLastString(dongmyun, '면')) {
-              ri = land.name;
+              ri = item.land.name;
             } else {
-              dongmyun = land.name;
+              dongmyun = item.land.name;
               ri = '';
             }
-            if (hasAddition(land.addition0)) {
-              rest += ' ' + land.addition0.value;
+            if (hasAddition(item.land.addition0)) {
+              rest += ' ' + item.land.addition0.value;
             }
           }
         }
-        return [sido, sigugun, dongmyun, ri, rest].join(' ');
+        let addr = [sido, sigugun, dongmyun, ri, rest].join(' ');
+        sido = sigugun = dongmyun = ri = rest = null; // 메모리 정리
+        return addr;
       }
       function searchCoordinateToAddress(_lat, _lng) {
         return new Promise((resolve, reject) => {
@@ -330,18 +328,16 @@
             orders: [naver.maps.Service.OrderType.ADDR].join(',')
           }, function(status, response) {
             if (status === naver.maps.Service.Status.ERROR) {
-              reject({ error: "API 서비스 상태 에러" });
+              reject({ error:'API 서비스 상태 에러' });
             } else {
               if (response.v2.results.length === 0) {
-                reject({ error: "검색 결과가 없습니다" });
+                reject({ error:'검색 결과가 없습니다' });
               } else {
                 let addresses = [];
-                let items = response.v2.results;
-                let = address = '';
-                for (var i=0, ii=items.length, item, addrType; i<ii; i++) {
-                  item = items[i];
-                  address = makeAddress(item) || '';
+                for (let i = 0; i < response.v2.results.length; i++) {
+                  let address = makeAddress(response.v2.results[i]) || '';
                   addresses.push(address);
+                  address = null; // 메모리 정리
                 }
                 resolve(addresses);
               }
@@ -360,12 +356,14 @@
         mapTypeControl: true
       }
       let map = new naver.maps.Map('map', mapOptions);
+      mapOptions = null; // 메모리 정리
       // 마커 생성
       let markerOptions = {
         position: {lat: 37.4814128, lng: 126.8804387},
         map: map
       }
       let marker = new naver.maps.Marker(markerOptions);
+      markerOptions = null; // 메모리 정리
       // 마커에 정보창 생성
       let infoWindowOptions = {
         content: /* html */`
@@ -378,6 +376,7 @@
       }
       let infoWindow = new naver.maps.InfoWindow(infoWindowOptions);
       infoWindow.open(map, marker);
+      infoWindowOptions = null; // 메모리 정리
       // 위도-경도 값 복사하는 함수
       function copyCoord(_lat, _lng) {
         let copyText = document.createElement('textarea');
@@ -386,7 +385,7 @@
         copyText.select();
         document.execCommand('copy');
         document.body.removeChild(copyText);
-        copyText = null;
+        copyText = null; // 메모리 정리
       }
       // 주소를 복사하는 함수
       function copyAddress(_address) {
@@ -396,7 +395,7 @@
         copyText.select();
         document.execCommand('copy');
         document.body.removeChild(copyText);
-        copyText = null;
+        copyText = null; // 메모리 정리
       }
       // 지도 클릭 이벤트 생성
       naver.maps.Event.addListener(map, 'click', function(e) {
@@ -453,7 +452,6 @@
         }
         naverSearchLocal(query)
         .then((res) => {
-          console.log(res);
           if (res.data.errorCode) {
             // 에러인 경우 예외처리
             throw new Error(res.data.errorMessage);
@@ -493,8 +491,12 @@
                     </div>
                   `);
                   infoWindow.open(map, marker);
+                  // 메모리 정리
+                  coord = null;
                 });
                 tbody.appendChild(tr);
+                // 메모리 정리
+                tr = null;
               });
             })
             .catch((err) => {
@@ -534,11 +536,19 @@
                   </div>
                 `);
                 infoWindow.open(map, marker);
+                // 메모리 정리
+                tm128 = null;
+                coord = null;
               });
               tbody.appendChild(tr);
+              // 메모리 정리
+              tr = null;
             });
           }
           result.style.display = 'grid';
+          // 메모리 정리
+          result = null;
+          tbody = null;
         })
         .catch((err) => {
           document.querySelector('table.result tbody').innerHTML = /* html */`
@@ -548,6 +558,8 @@
           `;
           document.querySelector('div.result').style.display = 'grid';
         });
+        // 메모리 정리
+        query = null;
       }
       // 검색창 엔터키 입력 이벤트
       document.querySelector('input#searchbox-input').addEventListener('keydown', (e) => {
