@@ -1,4 +1,11 @@
 <?php
+  // CORS 허용
+  header("Access-Control-Allow-Origin:*");
+  // JSON 형식으로 응답
+  header("Content-Type:application/json");
+  // DB 접속정보 및 API KEY
+  require_once("../comm.php");
+  // 라우팅
   if (isset($_GET["query"])) {
     // 쿼리를 전달 받은 경우
     $params = array(
@@ -7,13 +14,13 @@
       "start" => 1,
       "sort" => "random"
     );
-    $url = "https://openapi.naver.com/v1/search/local.json?" . http_build_query($params);
+    $url = "https://openapi.naver.com/v1/search/local.json?" . http_build_query($params); // http_build_query는 URL인코딩된 결과물을 반환
     $headers = array(
       "Accept:*/*",
       "Content-Type:application/json",
       "Cache-Control:no-cache",
-      "X-Naver-Client-Id:{YourClientID}",
-      "X-Naver-Client-Secret:{YourClientSecret}"
+      "X-Naver-Client-Id:" . $api_naver_id,
+      "X-Naver-Client-Secret:" . $api_naver_secret
     );
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1); // HTTP 버전 1.1 사용
@@ -25,9 +32,15 @@
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false); // HTTPS 인증 사용 여부 (자체 인증서를 사용하는 서버는 false로 설정)
     $response = curl_exec($curl);
     curl_close($curl);
+    // 응답이 JSON 형식이므로 그대로 클라이언트로 응답
     echo $response; // CURLOPT_RETURNTRANSFER이 false인 경우에는 1이 출력됨
   } else {
     // 쿼리를 전달 받지 못한 경우
-    echo "{\"errorMessage\":\"No query string (입력받은 쿼리가 없습니다)\",\"errorCode\":\"000\"}";
+    $error = (object) array(
+      "errorMessage" => "No query string (입력받은 쿼리가 없습니다)",
+      "errorCode" => "000"
+    );
+    echo json_encode($error, JSON_UNESCAPED_UNICODE); // 한글 인코딩 깨짐 방지
+    exit();
   }
 ?>
