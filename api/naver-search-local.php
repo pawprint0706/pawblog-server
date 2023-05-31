@@ -4,7 +4,7 @@
   // JSON 형식으로 응답
   header("Content-Type:application/json");
   // DB 접속정보 및 API KEY
-  require_once("../comm.php");
+  require_once("../conf/secret.php");
   // 라우팅
   if (isset($_GET["query"])) {
     // 쿼리를 전달 받은 경우
@@ -41,6 +41,5 @@
       "errorCode" => "000"
     );
     echo json_encode($error, JSON_UNESCAPED_UNICODE); // 한글 인코딩 깨짐 방지
-    exit();
   }
 ?>

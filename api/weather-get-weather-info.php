@@ -1,22 +1,24 @@
 <?php
-  // 디버깅 출력 여부
+  // PHP는 전역변수에 접근하려면 "global" 키워드 사용
+  // 혹은 $GLOBALS["weatherDebug"]로 접근 가능
   global $weatherDebug;
+  // 디버깅 출력 여부
   if ($weatherDebug) {
     echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - getWeatherInfo: DebugOutput enabled')</script>";
   }
   // DB 접속정보 및 API KEY
-  require_once("../comm.php");
+  require_once("../conf/secret.php");
   // 기상청 좌표 변환 함수
   require_once("./weather-dfs-xy-conv.php");
   
   // 날씨 정보를 가져오는 함수
   function getWeatherInfo($isNewAddr, &$locationObj) {
-    // PHP는 전역변수에 접근하려면 "global" 키워드 사용
-    // 혹은 $GLOBALS["weatherDebug"]로 접근 가능
+    // 디버깅 출력 여부
+    global $weatherDebug;
+    // API Keys
     global $api_naver_cloud_id;
     global $api_naver_cloud_secret;
     global $api_weather;
-    global $weatherDebug;
     // 초단기실황(NCST), 초단기예보(FCST) 정보에서 원하는 카테고리의 값을 찾는 함수
     function findCategoryValue($items, $category, $value) {
       foreach ($items as $item) {

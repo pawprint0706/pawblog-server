@@ -56,7 +56,7 @@
   // CORS 허용
   header("Access-Control-Allow-Origin:*");
   // DB 접속정보 및 API KEY
-  require_once("../comm.php");
+  require_once("../conf/secret.php");
   // 날씨 정보를 가져오는 함수
   require_once("./weather-get-weather-info.php");
 
@@ -64,7 +64,7 @@
   $dbConn = new mysqli($host, $user, $pass, $db, $port);
   if (!$dbConn) {
     if ($weatherDebug) {
-      echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - DB connection failed')</script>";
+      echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - DB connect failed')</script>";
     }
     $error = (object) array("errorMessage" => "DB connection failed (DB 접속에 실패하였습니다)");
     echo json_encode($error, JSON_UNESCAPED_UNICODE);
@@ -104,11 +104,47 @@
           echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [UPDATE] " . $_GET["address"] . "')</script>";
         }
         // 기존 JSON 문자열 파싱
-        $row["geocode"] = json_decode($row["geocode"]);
-        $row["ncst"] = json_decode($row["ncst"]);
-        $row["fcst"] = json_decode($row["fcst"]);
-        $row["weather"] = json_decode($row["weather"]);
+        // $row는 연관배열이므로 이를 객체로 변환한다
+        class Location {
+          public $address;
+          public $navercode;
+          public $geocode;
+          public $sunrise;
+          public $sunset;
+          public $ncst;
+          public $fcst;
+          public $weather;
+          public $updateTime;
+        }
+        $location = new Location();
+        $location->address = $row["address"];
+        $location->navercode = $row["navercode"];
+        $location->geocode = json_decode($row["geocode"]);
+        $location->sunrise = $row["sunrise"];
+        $location->sunset = $row["sunset"];
+        $location->ncst = json_decode($row["ncst"]);
+        $location->fcst = json_decode($row["fcst"]);
+        $location->weather = json_decode($row["weather"]);
+        $location->updateTime = $row["updateTime"];
         // 일출/일몰/초단기실황/초단기예보 업데이트
+        $weatherResult = getWeatherInfo(false, $location);
+        if ($weatherResult) {
+          // 새 날씨 정보를 DB에 갱신하기
+          $queryResult = $dbConn->query("UPDATE weather_cache_tbl SET address='" . $location->address . "', navercode='" . $location->navercode . "', geocode='" . json_encode($location->geocode) . "', sunrise='" . $location->sunrise . "', sunset='" . $location->sunset . "', ncst='" . json_encode($location->ncst) . "', fcst='" . json_encode($location->fcst) . "', weather='" . json_encode($location->weather) . "', updateTime='" . $location->updateTime . "' WHERE address='" . $location->address . "'");
+          if (!$queryResult) {
+            if ($weatherDebug) {
+              echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - DB update failed (" . $_GET["address"] . ")')</script>";
+            }
+          }
+          // 클라이언트에 응답
+          echo json_encode($location, JSON_UNESCAPED_UNICODE);
+        } else {
+          if ($weatherDebug) {
+            echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [FAIL] " . $_GET["address"] . "')</script>";
+          }
+          $error = (object) array("errorMessage" => "Failed to get weather data (날씨 정보를 가져오지 못했습니다)");
+          echo json_encode($error, JSON_UNESCAPED_UNICODE);
+        }
       }
     } else {
       // 처음 질의 받은 지역명일 경우 DB에 새로운 레코드를 생성한다
@@ -138,6 +174,24 @@
       $location->weather = (object) array("data" => "null");
       $location->updateTime = "2022-01-01 09:00:00";
       // 일출/일몰/초단기실황/초단기예보 업데이트
+      $weatherResult = getWeatherInfo(true, $location);
+      if ($weatherResult) {
+        // 새 주소의 날씨 정보를 DB에 갱신하기
+        $queryResult = $dbConn->query("INSERT INTO weather_cache_tbl VALUES ('" . $location->address . "', '" . $location->navercode . "', '" . json_encode($location->geocode) . "', '" . $location->sunrise . "', '" . $location->sunset . "', '" . json_encode($location->ncst) . "', '" . json_encode($location->fcst) . "', '" . json_encode($location->weather) . "', '" . $location->updateTime . "')");
+        if (!$queryResult) {
+          if ($weatherDebug) {
+            echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - DB insert failed (" . $_GET["address"] . ")')</script>";
+          }
+        }
+        // 클라이언트에 응답
+        echo json_encode($location, JSON_UNESCAPED_UNICODE);
+      } else {
+        if ($weatherDebug) {
+          echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [FAIL] " . $_GET["address"] . "')</script>";
+        }
+        $error = (object) array("errorMessage" => "Failed to get weather data (날씨 정보를 가져오지 못했습니다)");
+        echo json_encode($error, JSON_UNESCAPED_UNICODE);
+      }
     }
   } else {
     // 주소를 전달 받지 못한 경우
@@ -146,6 +200,5 @@
     }
     $error = (object) array("errorMessage" => "No address input (입력받은 주소가 없습니다)");
     echo json_encode($error, JSON_UNESCAPED_UNICODE);
-    exit();
   }
 ?>

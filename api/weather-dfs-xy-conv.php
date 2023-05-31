@@ -16,7 +16,7 @@
     $OLON = 126.0; // 기준점 경도(degree)
     $OLAT = 38.0; // 기준점 위도(degree)
     $XO = 43; // 기준점 X좌표(GRID)
-    $YO = 136; // 기1준점 Y좌표(GRID)
+    $YO = 136; // 기준점 Y좌표(GRID)
 
     $DEGRAD = M_PI / 180.0;
     $RADDEG = 180.0 / M_PI;
