@@ -3,7 +3,95 @@
   <head>
     <meta charset="utf-8">
     <title>이미지 좌표 확인하기</title>
+    <!-- 스타일 -->
+    <style>
+      div#imageContainer {
+        display: inline-block; /* 이미지의 크기에 따라 컨테이너 크기가 조정되게 함 */
+        position: relative;
+        margin: 0;
+        padding: 0;
+        border: 1px solid black;
+      }
+      div#imageContainer:hover {
+        cursor: crosshair; /* 마우스 커서를 십자가로 변경 */
+      }
+      div#imageContainer img {
+        display: block;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        max-width: 100%;
+      }
+      div#imageContainer div.coordinates {
+        display: block;
+        position: absolute;
+        margin: 0;
+        padding: 0;
+        border: 2px solid white;
+        background-color: red;
+        width: 3px;
+        height: 3px;
+        pointer-events: none; /* 마커가 클릭 이벤트를 가로채지 않도록 함 */
+      }
+    </style>
   </head>
   <body>
+    <h1>이미지 좌표 확인하기</h1>
+    <p>이미지를 불러온 후 이미지의 특정 위치를 클릭하면 해당 위치의 좌표값을 보여주고 클립보드로 복사합니다.</p>
+    <!-- 이미지 불러오기 -->
+    <input type="file" id="imageUpload" accept="image/*" />
+    <!-- 이미지 좌표 표시 -->
+    <p id="showCoordinates">X: 0, Y: 0</p>
+    <!-- 이미지 표시 영역 -->
+    <div id="imageContainer"></div>
+    <script>
+      // 이미지가 불러와지면 화면에 표시
+      document.querySelector('input#imageUpload').addEventListener('change', (e) => {
+        let reader = new FileReader();
+        reader.onload = (event) => {
+          let img = new Image();
+          img.onload = () => {
+            document.querySelector('div#imageContainer').innerHTML = '';
+            document.querySelector('div#imageContainer').appendChild(img);
+          }
+          img.src = event.target.result;
+        }
+        reader.readAsDataURL(e.target.files[0]);
+      });
+      // 클릭한 위치에 마커 표시
+      document.querySelector('div#imageContainer').addEventListener('click', (e) => {
+        // 기존 마커 삭제
+        let markers = document.querySelectorAll('div#imageContainer .coordinates');
+        for (let i = 0; i < markers.length; i++) {
+          markers[i].parentNode.removeChild(markers[i]);
+        }
+        markers = null; // 메모리 정리
+        // 이미지 상 클릭된 위치 좌표 구하기
+        let rect = e.target.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        // 새로운 마커 등록
+        let marker = document.createElement('div');
+        marker.className = 'coordinates';
+        marker.style.left = (x - 3) + 'px';
+        marker.style.top = (y - 3) + 'px';
+        document.querySelector('div#imageContainer').appendChild(marker);
+        // 좌표 출력
+        document.querySelector('p#showCoordinates').innerHTML = 'X: ' + x + ', Y: ' + y;
+        // 좌표 복사
+        let copyText = document.createElement('textarea');
+        copyText.value = `{"x":"${x}","y":"${y}"}`;
+        document.body.appendChild(copyText);
+        copyText.select();
+        document.execCommand('copy');
+        document.body.removeChild(copyText);
+        // 메모리 정리
+        rect = null;
+        x = null;
+        y = null;
+        marker = null;
+        copyText = null;
+      });
+    </script>
   </body>
 </html>
