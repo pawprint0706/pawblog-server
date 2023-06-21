@@ -384,7 +384,7 @@
       // 위도-경도 값 복사하는 함수
       function copyCoord(_lat, _lng) {
         let copyText = document.createElement('textarea');
-        copyText.value = `{"lat":"${_lat}","long":"${_lng}"}`;
+        copyText.value = `{"lat":"${_lat}","lng":"${_lng}"}`;
         document.body.appendChild(copyText);
         copyText.select();
         document.execCommand('copy');
