@@ -173,7 +173,6 @@
       if ($weatherDebug) {
         echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Failed to get the geocode')</script>";
       }
-      echo "{\"errorMessage\":\"Failed to get the geocode (지오코드를 가져오지 못했습니다)\"}";
       return false;
     }
     // 일출-일몰 시각 (sunrise-sunset.org API)
@@ -304,7 +303,6 @@
       if ($weatherDebug) {
         echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Failed to get weather-ncst data')</script>";
       }
-      echo "{\"errorMessage\":\"Failed to get weather-ncst data (초단기실황 정보를 가져오지 못했습니다)\"}";
     }
     // 강수형태가 0(없음)일 경우 초단기예보(FCST) 정보 가져오기
     $fcst = NULL;
@@ -386,7 +384,6 @@
         if ($weatherDebug) {
           echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Failed to get weather-fcst data')</script>";
         }
-        echo "{\"errorMessage\":\"Failed to get weather-fcst data (초단기예보 정보를 가져오지 못했습니다)\"}";
       }
     } else {
       // ncst.PTY(강수형태)가 0(없음)이 아닌 경우
@@ -429,7 +426,7 @@
       if ($weatherDebug) {
         echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] TM Coordinate: " . $response->response->header->resultMsg . "')</script>";
       }
-      if (isset($response->response->body)) {
+      if (isset($response->response->body->items[0])) {
         // TM 좌표계 가져오기 성공
         $tmX = $response->response->body->items[0]->tmX;
         $tmY = $response->response->body->items[0]->tmY;
@@ -458,16 +455,15 @@
         if ($weatherDebug) {
           echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] station: " . $response->response->header->resultMsg . "')</script>";
         }
-        if (isset($response->response->body)) {
+        if (isset($response->response->body->items[0])) {
           // 측정소 이름 가져오기 성공
-          $locationObj->station = $response->response->body->items[0]->station;
+          $locationObj->station = $response->response->body->items[0]->stationName;
         } else {
           // 측정소 이름 가져오기 실패
           $locationObj->station = NULL;
           if ($weatherDebug) {
             echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Failed to get station data')</script>";
           }
-          echo "{\"errorMessage\":\"Failed to get station data (측정소 이름을 가져오지 못했습니다)\"}";
         }
       } else {
         // TM 좌표계 가져오기 실패
@@ -475,7 +471,6 @@
         if ($weatherDebug) {
           echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Failed to get TM Coordinate data')</script>";
         }
-        echo "{\"errorMessage\":\"Failed to get TM Coordinate data (TM 좌표계를 가져오지 못했습니다)\"}";
       }
     }
     // 대기오염정보 가져오기
@@ -485,7 +480,6 @@
       if ($weatherDebug) {
         echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] station: NULL')</script>";
         echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Skip get Air Pollution Information data')</script>";
-        echo "{\"errorMessage\":\"Skip get Air Pollution Information data - station is NULL (대기오염정보를 가져오지 않습니다 - 측정소 이름 없음)\"}";
       }
     } else {
       // 측정소 이름 (디버깅 출력)
@@ -497,7 +491,7 @@
       $url = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty";
       $url .= "?serviceKey=" . $apiKey;
       $url .= "&returnType=json&numOfRows=1&pageNo=1";
-      $url .= "&station=" . urlencode($locationObj->station);
+      $url .= "&stationName=" . urlencode($locationObj->station);
       $url .= "&dataTerm=daily&ver=1.4";
       // 에어코리아 서버로 요청하기
       $headers = array(
@@ -528,7 +522,6 @@
         if ($weatherDebug) {
           echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - [" . $locationObj->address . "] Failed to get Air Pollution Information data')</script>";
         }
-        echo "{\"errorMessage\":\"Failed to get Air Pollution Information data (대기오염정보를 가져오지 못했습니다)\"}";
       }
     }
     // 수집한 정보를 weather 객체에 맞추어 정리
@@ -545,7 +538,7 @@
           $locationObj->weather->sky = "overcast";
           break;
         default:
-          $locationObj->weather->sky = "clear";
+          $locationObj->weather->sky = "none";
           break;
       }
     } else {
@@ -577,7 +570,7 @@
           $locationObj->weather->sky = "snow";
           break;
         default:
-          $locationObj->weather->sky = "clear";
+          $locationObj->weather->sky = "none";
           break;
       }
     }
@@ -585,19 +578,19 @@
     if ((float) $ncst->T1H > -900 && (float) $ncst->T1H < 900) {
       $locationObj->weather->temperature = (float) $ncst->T1H;
     } else {
-      $locationObj->weather->temperature = 0;
+      $locationObj->weather->temperature = -1;
     }
     // 1시간 강수량 (RN1)
     if ((float) $ncst->RN1 > -900 && (float) $ncst->RN1 < 900) {
       $locationObj->weather->rainfall = (float) $ncst->RN1;
     } else {
-      $locationObj->weather->rainfall = 0;
+      $locationObj->weather->rainfall = -1;
     }
     // 습도 (REH)
     if ((float) $ncst->REH > -900 && (float) $ncst->REH < 900) {
       $locationObj->weather->humidity = (float) $ncst->REH;
     } else {
-      $locationObj->weather->humidity = 0;
+      $locationObj->weather->humidity = -1;
     }
     // 풍향 (VEC)
     if ((float) $ncst->VEC > -900 && (float) $ncst->VEC < 900) {
@@ -656,57 +649,69 @@
           $locationObj->weather->windDirection = "N";
           break;
         default:
-          $locationObj->weather->windDirection = "N";
+          $locationObj->weather->windDirection = "none";
           break;
       }
     } else {
-      $locationObj->weather->windDirection = "N";
+      $locationObj->weather->windDirection = "none";
     }
     // 풍속 (WSD)
     if ((float) $ncst->WSD > -900 && (float) $ncst->WSD < 900) {
       $locationObj->weather->windSpeed = (float) $ncst->WSD;
     } else {
-      $locationObj->weather->windSpeed = 0;
+      $locationObj->weather->windSpeed = -1;
     }
-    // 초미세먼지(pm2.5) 농도
-    $locationObj->weather->pm25Value = (int) $airPollutionInfo->pm25Value;
-    // 초미세먼지(pm2.5) 1시간 지수
-    switch ($airPollutionInfo->pm25Grade1h) {
-      case "1":
-        $locationObj->weather->pm25Grade = "good";
-        break;
-      case "2":
-        $locationObj->weather->pm25Grade = "average";
-        break;
-      case "3":
-        $locationObj->weather->pm25Grade = "bad";
-        break;
-      case "4":
-        $locationObj->weather->pm25Grade = "verybad";
-        break;
-      default:
-        $locationObj->weather->pm25Grade = "good";
-        break;
-    }
-    // 미세먼지(pm10) 농도
-    $locationObj->weather->pm10Value = (int) $airPollutionInfo->pm10Value;
-    // 미세먼지(pm10) 1시간 지수
-    switch ($airPollutionInfo->pm10Grade1h) {
-      case "1":
-        $locationObj->weather->pm10Grade = "good";
-        break;
-      case "2":
-        $locationObj->weather->pm10Grade = "average";
-        break;
-      case "3":
-        $locationObj->weather->pm10Grade = "bad";
-        break;
-      case "4":
-        $locationObj->weather->pm10Grade = "verybad";
-        break;
-      default:
-        $locationObj->weather->pm10Grade = "good";
-        break;
+    if (empty($airPollutionInfo)) {
+      // 미세먼지 데이터가 없는 경우 (관측소 이름이 없거나 대기오염정보를 가져오지 못한 경우)
+      // 초미세먼지(pm2.5) 농도
+      $locationObj->weather->pm25Value = -1;
+      // 초미세먼지(pm2.5) 1시간 지수
+      $locationObj->weather->pm25Grade = "none";
+      // 미세먼지(pm10) 농도
+      $locationObj->weather->pm10Value = -1;
+      // 미세먼지(pm10) 1시간 지수
+      $locationObj->weather->pm10Grade = "none";
+    } else {
+      // 초미세먼지(pm2.5) 농도
+      $locationObj->weather->pm25Value = (int) $airPollutionInfo->pm25Value;
+      // 초미세먼지(pm2.5) 1시간 지수
+      switch ($airPollutionInfo->pm25Grade1h) {
+        case "1":
+          $locationObj->weather->pm25Grade = "good";
+          break;
+        case "2":
+          $locationObj->weather->pm25Grade = "average";
+          break;
+        case "3":
+          $locationObj->weather->pm25Grade = "bad";
+          break;
+        case "4":
+          $locationObj->weather->pm25Grade = "verybad";
+          break;
+        default:
+          $locationObj->weather->pm25Grade = "none";
+          break;
+      }
+      // 미세먼지(pm10) 농도
+      $locationObj->weather->pm10Value = (int) $airPollutionInfo->pm10Value;
+      // 미세먼지(pm10) 1시간 지수
+      switch ($airPollutionInfo->pm10Grade1h) {
+        case "1":
+          $locationObj->weather->pm10Grade = "good";
+          break;
+        case "2":
+          $locationObj->weather->pm10Grade = "average";
+          break;
+        case "3":
+          $locationObj->weather->pm10Grade = "bad";
+          break;
+        case "4":
+          $locationObj->weather->pm10Grade = "verybad";
+          break;
+        default:
+          $locationObj->weather->pm10Grade = "none";
+          break;
+      }
     }
     // 함수 정상 종료
     return true;
