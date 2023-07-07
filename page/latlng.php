@@ -1,6 +1,6 @@
 <?php
   // DB 접속정보 및 API KEY
-  require_once("../conf/secret.php");
+  require_once($_SERVER['DOCUMENT_ROOT']."/conf/secret.php");
 ?>
 <!DOCTYPE html>
 <html lang="ko">
@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- 네이버 지도 API -->
     <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=<?= $api_naver_cloud_id ?>&submodules=geocoder"></script>
-    <!-- Google Fonts -->
+    <!-- Google Fonts (Icon) -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- 스타일 -->
     <style>
@@ -244,7 +244,7 @@
       function naverSearchLocal(query) {
         const params = new URLSearchParams();
         params.append('query', query);
-        return axios.get('/api/naver-search-local.php', {
+        return axios.get('/api/naver/search/local', {
           headers: {
             'Accept':'*/*',
             'Content-Type':'application/json',

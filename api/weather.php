@@ -1,50 +1,4 @@
 <?php
-  // 기상 코드 값 해석
-  // +900이상, -900 이하의 값은 Missing 값
-  //
-  // ** SKY 하늘상태 (FCST 초단기예보 - 현시점부터 6시간 이내 예측)
-  // - 1: clear    맑음
-  // - 3: cloudy   구름많음
-  // - 4: overcast 흐림
-  //
-  // ** PTY 강수형태 (NCST 초단기실황 - 현시점의 관측값)
-  // - 0: 없음 (FCST의 SKY를 참고해야 함)
-  // - 1: rain               비
-  // - 2: rain/snow          비/눈
-  // - 3: snow               눈
-  // - 4: shower             소나기
-  // - 5: drizzle            빗방울
-  // - 6: drizzle/snowflurry 빗방울/눈날림
-  // - 7: snowflurry         눈날림
-  //
-  // ** T1H 기온(°C)
-  //
-  // ** RN1 1시간 강수량(mm)
-  //
-  // ** REH 습도(%)
-  //
-  // ** VEC 풍향(deg)
-  // - (풍향값 + 22.5 * 0.5) / 22.5) = 변환값(소수점 이하 버림)
-  // -  0: N   북
-  // -  1: NNE 북북동
-  // -  2: NE  북동
-  // -  3: ENE 동북동
-  // -  4: E   동
-  // -  5: ESE 동남동
-  // -  6: SE  남동
-  // -  7: SSE 남남동
-  // -  8: S   남
-  // -  9: SSW 남남서
-  // - 10: SW  남서
-  // - 11: WSW 서남서
-  // - 12: W   서
-  // - 13: WNW 서북서
-  // - 14: NW  북서
-  // - 15: NNW 북북서
-  // - 16: N   북
-  //
-  // ** WSD 풍속(m/s)
-  //
   // 디버깅 출력 여부
   $weatherDebug = false;
   if ($weatherDebug) {
@@ -56,9 +10,9 @@
   // CORS 허용
   header("Access-Control-Allow-Origin:*");
   // DB 접속정보 및 API KEY
-  require_once("../conf/secret.php");
+  require_once($_SERVER['DOCUMENT_ROOT']."/conf/secret.php");
   // 날씨 정보를 가져오는 함수
-  require_once("./weather-get-weather-info.php");
+  require_once($_SERVER['DOCUMENT_ROOT']."/api/weather-get-weather-info.php");
 
   // DB 연결하기
   $dbConn = new mysqli($host, $user, $pass, $db, $port);
@@ -93,8 +47,6 @@
         }
         // 기존 JSON 문자열 파싱
         $row["geocode"] = json_decode($row["geocode"]);
-        $row["ncst"] = json_decode($row["ncst"]);
-        $row["fcst"] = json_decode($row["fcst"]);
         $row["weather"] = json_decode($row["weather"]);
         // 클라이언트에 응답
         echo json_encode($row, JSON_UNESCAPED_UNICODE);
@@ -111,8 +63,7 @@
           public $geocode;
           public $sunrise;
           public $sunset;
-          public $ncst;
-          public $fcst;
+          public $station;
           public $weather;
           public $updateTime;
         }
@@ -122,15 +73,14 @@
         $location->geocode = json_decode($row["geocode"]);
         $location->sunrise = $row["sunrise"];
         $location->sunset = $row["sunset"];
-        $location->ncst = json_decode($row["ncst"]);
-        $location->fcst = json_decode($row["fcst"]);
+        $location->station = $row["station"];
         $location->weather = json_decode($row["weather"]);
         $location->updateTime = $row["updateTime"];
         // 일출/일몰/초단기실황/초단기예보 업데이트
         $weatherResult = getWeatherInfo(false, $location);
         if ($weatherResult) {
           // 새 날씨 정보를 DB에 갱신하기
-          $queryResult = $dbConn->query("UPDATE weather_cache_tbl SET address='" . $location->address . "', navercode='" . $location->navercode . "', geocode='" . json_encode($location->geocode) . "', sunrise='" . $location->sunrise . "', sunset='" . $location->sunset . "', ncst='" . json_encode($location->ncst) . "', fcst='" . json_encode($location->fcst) . "', weather='" . json_encode($location->weather) . "', updateTime='" . $location->updateTime . "' WHERE address='" . $location->address . "'");
+          $queryResult = $dbConn->query("UPDATE weather_cache_tbl SET address='" . $location->address . "', navercode='" . $location->navercode . "', geocode='" . json_encode($location->geocode) . "', sunrise='" . $location->sunrise . "', sunset='" . $location->sunset . "', station='" . $location->station . "', weather='" . json_encode($location->weather) . "', updateTime='" . $location->updateTime . "' WHERE address='" . $location->address . "'");
           if (!$queryResult) {
             if ($weatherDebug) {
               echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - DB update failed (" . $_GET["address"] . ")')</script>";
@@ -158,8 +108,7 @@
         public $geocode;
         public $sunrise;
         public $sunset;
-        public $ncst;
-        public $fcst;
+        public $station;
         public $weather;
         public $updateTime;
       }
@@ -169,15 +118,25 @@
       $location->geocode = (object) array("lat" => "0", "lng" => "0");
       $location->sunrise = "2022-01-01 06:00:00";
       $location->sunset = "2022-01-01 18:00:00";
-      $location->ncst = (object) array("PTY" => "0", "T1H" => "0", "RN1" => "0", "REH" => "0", "VEC" => "0", "WSD" => "0");
-      $location->fcst = (object) array("SKY" => "0");
-      $location->weather = (object) array("data" => "null");
+      $location->station = NULL;
+      $location->weather = (object) array(
+        "sky" => NULL,
+        "temperature" => 0,
+        "rainfall" => 0,
+        "humidity" => 0,
+        "windDirection" => NULL,
+        "windSpeed" => 0,
+        "pm25Value" => 0,
+        "pm25Grade" => NULL,
+        "pm10Value" => 0,
+        "pm10Grade" => NULL
+      );
       $location->updateTime = "2022-01-01 09:00:00";
       // 일출/일몰/초단기실황/초단기예보 업데이트
       $weatherResult = getWeatherInfo(true, $location);
       if ($weatherResult) {
         // 새 주소의 날씨 정보를 DB에 갱신하기
-        $queryResult = $dbConn->query("INSERT INTO weather_cache_tbl VALUES ('" . $location->address . "', '" . $location->navercode . "', '" . json_encode($location->geocode) . "', '" . $location->sunrise . "', '" . $location->sunset . "', '" . json_encode($location->ncst) . "', '" . json_encode($location->fcst) . "', '" . json_encode($location->weather) . "', '" . $location->updateTime . "')");
+        $queryResult = $dbConn->query("INSERT INTO weather_cache_tbl VALUES ('" . $location->address . "', '" . $location->navercode . "', '" . json_encode($location->geocode) . "', '" . $location->sunrise . "', '" . $location->sunset . "', '" . $location->station . "', '" . json_encode($location->weather) . "', '" . $location->updateTime . "')");
         if (!$queryResult) {
           if ($weatherDebug) {
             echo "<script>console.log('" . date("Y-m-d H:i:s T") . " - DB insert failed (" . $_GET["address"] . ")')</script>";

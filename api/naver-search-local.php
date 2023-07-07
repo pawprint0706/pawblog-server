@@ -4,7 +4,7 @@
   // JSON 형식으로 응답
   header("Content-Type:application/json");
   // DB 접속정보 및 API KEY
-  require_once("../conf/secret.php");
+  require_once($_SERVER['DOCUMENT_ROOT']."/conf/secret.php");
   // 라우팅
   if (isset($_GET["query"])) {
     // 쿼리를 전달 받은 경우
