@@ -476,7 +476,7 @@
                 tr.addEventListener('click', () => {
                   // 기존 정보창 닫기
                   infoWindow.close();
-                  // 클릭한 위치에 마커 생성
+                  // 응답 받은 좌표에 마커 생성
                   let coord = new naver.maps.Point(item.x, item.y);
                   map.setCenter(coord);
                   marker.setPosition(coord);
@@ -520,9 +520,20 @@
               tr.addEventListener('click', () => {
                 // 기존 정보창 닫기
                 infoWindow.close();
-                // 클릭한 위치에 마커 생성
-                let tm128 = new naver.maps.Point(item.mapx, item.mapy);
-                let coord = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+                // 응답 받은 좌표에 마커 생성
+                // 기존 코드
+                // let tm128 = new naver.maps.Point(item.mapx, item.mapy);
+                // let coord = naver.maps.TransCoord.fromTM128ToLatLng(tm128);
+                // 2023.08.25 기준 KATECH 좌표계(TM128) -> WGS84 좌표계 변경됨
+                // rss/channel/item/mapx | integer | 업체, 기관이 위치한 장소의 x 좌표
+                // rss/channel/item/mapy | integer | 업체, 기관이 위치한 장소의 y 좌표
+                // 참고) 서울 시청 기준 결과 값 변경 예
+                // rss/channel/item/mapx : 309947 → 1269873882
+                // rss/channel/item/mapy : 552092 → 375666103
+                // mapx, mapy가 정수형이므로 1e7로 나누어 소수점 이하 7자리로 변경
+                let wgs84_mapx = item.mapx / 1e7;
+                let wgs84_mapy = item.mapy / 1e7;
+                let coord = new naver.maps.Point(wgs84_mapx, wgs84_mapy);
                 map.setCenter(coord);
                 marker.setPosition(coord);
                 infoWindow.setContent(/* html */`
