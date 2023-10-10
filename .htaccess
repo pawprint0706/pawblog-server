@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# 디렉토리 슬래시 비활성화 (URL 끝에 '/'가 붙지 않도록 설정)
+DirectorySlash Off
+
+# /api/ 경로에서 확장자 없이 호출 시 .php로 리다이렉트
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^api/(.*)$ api/$1.php [L]
+
+# /page/ 경로에서 확장자 없이 호출 시 .php로 리다이렉트
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^page/(.*)$ page/$1.php [L]

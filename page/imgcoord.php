@@ -1,3 +1,7 @@
+<?php
+  // DB 접속정보 및 API KEY
+  require_once($_SERVER['DOCUMENT_ROOT']."/conf/secret.php");
+?>
 <!DOCTYPE html>
 <html lang="ko">
   <head>
